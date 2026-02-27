@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuro-Lite | Lightweight Conversational AI</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <!-- Add a minimal, lightweight CSS framework -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css">
+    <!-- Add highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Add markdown-it for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #ddd;
+            --success-color: #27ae60;
+            --warning-color: #e67e22;
+            --error-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 160px);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: white;
+        }
+        
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.7rem;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            background-color: #e1f5fe;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        
+        .message.assistant {
+            background-color: #f1f1f1;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        
+        .message-content {
+            margin: 0;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 0.5rem;
+            border-top: 1px solid var(--border-color);
+            background-color: white;
+        }
+        
+        .chat-input textarea {
+            flex-grow: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 0.5rem;
+            resize: none;
+            height: 60px;
+        }
+        
+        .chat-input button {
+            margin-left: 0.5rem;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .typing-indicator::after {
+            content: '...';
+            animation: ellipsis 1.5s infinite;
+            width: 1.5em;
+            display: inline-block;
+            text-align: left;
+        }
+        
+        @keyframes ellipsis {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
+        }
+        
+        /* Code block styling */
+        pre {
+            background-color: #f5f5f5;
+            padding: 0.8rem;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        
+        /* Markdown styling */
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, 
+        .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: var(--primary-color);
+        }
+        
+        .markdown-body h1 { font-size: 1.8em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .markdown-body h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .markdown-body h3 { font-size: 1.3em; }
+        
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 2em;
+        }
+        
+        .markdown-body img {
+            max-width: 100%;
+        }
+        
+        .markdown-body blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .actions button {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Neuro-Lite</h1>
+        <p>Lightweight Conversational AI Assistant</p>
+    </header>
+    
+    <main>
+        <div class="actions">
+            <button id="new-chat" title="Start a new conversation">New Conversation</button>
+            <button id="export-chat" title="Export conversation to file">Export Chat</button>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <div>Conversation</div>
+                <div id="status">Connected</div>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages">
+                <div class="message assistant">
+                    <div class="message-content markdown-body">
+                        <p>Hello! I'm Neuro-Lite, a lightweight AI assistant. How can I help you today?</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="typing-indicator" class="typing-indicator">Neuro-Lite is thinking</div>
+            
+            <div class="chat-input">
+                <textarea id="user-input" placeholder="Type your message here..." rows="3"></textarea>
+                <button id="send-button" title="Send message">Send</button>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 Neuro-Lite | Version 1.0</p>
+    </footer>
+    
+    <script>
+        // Initialize components
+        const md = window.markdownit({
+            html: false,
+            linkify: true,
+            typographer: true,
+            highlight: function(str, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(str, { language: lang }).value;
+                    } catch (__) {}
+                }
+                return ''; // use external default escaping
+            }
+        });
+        
+        // DOM elements
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const newChatButton = document.getElementById('new-chat');
+        const exportChatButton = document.getElementById('export-chat');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const statusDisplay = document.getElementById('status');
+        
+        // State
+        let conversationId = null;
+        let messageQueue = [];
+        let isProcessing = false;
+        
+        // Initialize app
+        function init() {
+            // Setup event listeners
+            userInput.addEventListener('keydown', handleInputKeydown);
+            sendButton.addEventListener('click', sendMessage);
+            newChatButton.addEventListener('click', startNewChat);
+            exportChatButton.addEventListener('click', exportChat);
+            
+            // Focus input
+            userInput.focus();
+            
+            // Check connection to backend
+            checkConnection();
+        }
+        
+        // Check connection to backend
+        async function checkConnection() {
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDisplay.textContent = `Connected (v${data.version})`;
+                    statusDisplay.style.color = '#4CAF50';
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                statusDisplay.textContent = 'Disconnected';
+                statusDisplay.style.color = '#F44336';
+                console.error('Connection error:', error);
+            }
+        }
+        
+        // Handle input keydown
+        function handleInputKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // Start a new chat
+        function startNewChat() {
+            if (confirm('Start a new conversation? This will clear the current chat.')) {
+                conversationId = null;
+                chatMessages.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-content markdown-body">
+                            <p>Hello! I'm Neuro-Lite, a lightweight AI assistant. How can I help you today?</p>
+                        </div>
+                    </div>
+                `;
+                userInput.value = '';
+                userInput.focus();
+            }
+        }
+        
+        // Export chat to file
+        function exportChat() {
+            // Get all messages
+            const messages = [];
+            document.querySelectorAll('.message').forEach(messageEl => {
+                const role = messageEl.classList.contains('user') ? 'User' : 'Assistant';
+                const content = messageEl.querySelector('.message-content').textContent;
+                messages.push(`${role}: ${content.trim()}`);
+            });
+            
+            // Create file content
+            const fileContent = messages.join('\n\n');
+            const blob = new Blob([fileContent], { type: 'text/plain' });
+            
+            // Create download link
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `neuro-lite-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // Send a message
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // Disable input during processing
+            userInput.value = '';
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Show typing indicator
+            typingIndicator.style.display = 'flex';
+            
+            try {
+                // Use streaming endpoint
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        message: message,
+                        stream: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
+                // Process the stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessageElement = null;
+                let assistantMessageContent = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    // Decode and process the chunk
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n\n');
+                    
+                    for (const line of lines) {
+                        if (!line.trim() || !line.startsWith('data: ')) continue;
+                        
+                        try {
+                            const data = JSON.parse(line.substring(6));
+                            
+                            if (data.type === 'start') {
+                                // Start of response
+                                conversationId = data.conversation_id;
+                                assistantMessageContent = '';
+                                assistantMessageElement = document.createElement('div');
+                                assistantMessageElement.className = 'message assistant';
+                                const contentElement = document.createElement('div');
+                                contentElement.className = 'message-content markdown-body';
+                                assistantMessageElement.appendChild(contentElement);
+                                chatMessages.appendChild(assistantMessageElement);
+                            } else if (data.type === 'token') {
+                                // Token received
+                                assistantMessageContent += data.token;
+                                if (assistantMessageElement) {
+                                    const contentElement = assistantMessageElement.querySelector('.message-content');
+                                    contentElement.innerHTML = md.render(assistantMessageContent);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
+                            } else if (data.type === 'end') {
+                                // End of response with final formatted message
+                                if (assistantMessageElement) {
+                                    const contentElement = assistantMessageElement.querySelector('.message-content');
+                                    contentElement.innerHTML = md.render(data.message);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    
+                                    // Apply syntax highlighting to code blocks
+                                    assistantMessageElement.querySelectorAll('pre code').forEach(block => {
+                                        hljs.highlightElement(block);
+                                    });
+                                }
+                            } else if (data.type === 'error') {
+                                throw new Error(data.error);
+                            }
+                        } catch (error) {
+                            console.error('Error processing stream chunk:', error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage(`I'm sorry, I encountered an error. Please try again later.`, 'assistant');
+            } finally {
+                // Re-enable input
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                typingIndicator.style.display = 'none';
+                userInput.focus();
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+        
+        // Add a message to the chat
+        function addMessage(content, role) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${role}`;
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'message-content markdown-body';
+            
+            if (role === 'user') {
+                contentElement.textContent = content;
+            } else {
+                contentElement.innerHTML = md.render(content);
+            }
+            
+            messageElement.appendChild(contentElement);
+            chatMessages.appendChild(messageElement);
+            
+            // Apply syntax highlighting to code blocks
+            if (role === 'assistant') {
+                messageElement.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            }
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
